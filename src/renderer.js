@@ -1,21 +1,12 @@
 const { ipcRenderer } = require('electron');
 
+// 🔑 Configured with your S.L.S.I. API key
+const GEMINI_API_KEY = "AQ.Ab8RN6J8I_iM1ljdD-UKCp3YrkEYTFBjwcsX-bi-QQCL9a4C2w"; 
+
 let isVoiceActive = false;
 let recognition = null;
 
-// Securely fetch API key from localStorage or prompt if missing
-function getApiKey() {
-    let key = localStorage.getItem('slsi_api_key');
-    if (!key) {
-        key = prompt("Please enter your Gemini API Key for S.L.S.I.:");
-        if (key) {
-            localStorage.setItem('slsi_api_key', key.trim());
-        }
-    }
-    return key;
-}
-
-// Voice Recognition Setup
+// Initialize Speech Recognition if supported
 if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
@@ -25,19 +16,21 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         document.getElementById('userInput').value = transcript;
-        window.sendMessage();
+        window.sendMessage(); // Send automatically once spoken
     };
 
     recognition.onerror = (event) => {
         console.error("Speech Recognition Error:", event.error);
-        if (isVoiceActive) recognition.start();
+        if (isVoiceActive) recognition.start(); // Restart on temporary glitch
     };
 
     recognition.onend = () => {
+        // Automatically restart listening if Voice Mode remains turned ON
         if (isVoiceActive) recognition.start();
     };
 }
 
+// Toggle Voice-to-Voice Mode
 window.toggleVoiceMode = function() {
     if (!recognition) {
         alert("Speech recognition is not supported on this environment.");
@@ -51,36 +44,37 @@ window.toggleVoiceMode = function() {
 
     if (isVoiceActive) {
         micBtn.classList.add('active');
-        if (voiceStatus) voiceStatus.textContent = "LISTENING";
-        speakText("Voice mode activated. Listening.");
+        voiceStatus.textContent = "LISTENING";
+        voiceStatus.style.color = "#FF3366";
+        speakText("Voice mode activated. I am listening.");
         recognition.start();
     } else {
         micBtn.classList.remove('active');
-        if (voiceStatus) voiceStatus.textContent = "OFF";
+        voiceStatus.textContent = "OFF";
+        voiceStatus.style.color = "#00F0FF";
         recognition.stop();
         window.speechSynthesis.cancel();
         speakText("Voice mode deactivated.");
     }
 };
 
+// Text-to-Speech Output Function
 function speakText(text) {
     if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
+        window.speechSynthesis.cancel(); // Stop any currently speaking audio
+        
+        // Clean text from code blocks or system outputs prior to speaking
         const cleanSpeech = text.replace(/```[\s\S]*?```/g, 'Code output generated.').replace(/[^a-zA-Z0-9.,?! ]/g, '');
+        
         const utterance = new SpeechSynthesisUtterance(cleanSpeech);
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
+        
         window.speechSynthesis.speak(utterance);
     }
 }
 
 window.sendMessage = async function() {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-        alert("API Key is required to run S.L.S.I.");
-        return;
-    }
-
     const input = document.getElementById('userInput');
     const chatBox = document.getElementById('chatBox');
     const text = input.value.trim();
@@ -105,28 +99,31 @@ window.sendMessage = async function() {
 
     // 1. Universal Code Generation & Notepad Typing Task
     if (lowerText.includes('notepad') && (lowerText.includes('code') || lowerText.includes('type') || lowerText.includes('write') || lowerText.includes('script'))) {
-        aiMsg.textContent = "Analyzing request, generating code, and opening Notepad...";
+        aiMsg.textContent = "Analyzing your request, generating the code, and opening Notepad...";
         
         try {
-            const aiPrompt = `Generate clean, standalone, complete source code based on this request: "${text}". Output ONLY raw source code without markdown or explanatory text.`;
-            let generatedCode = await callGeminiAPI(aiPrompt, apiKey);
+            const aiPrompt = `Generate clean, standalone, complete source code based on this exact user request: "${text}". Output ONLY the raw source code without any markdown code blocks, backticks, or explanatory text.`;
+            let generatedCode = await callGeminiAPI(aiPrompt);
             generatedCode = generatedCode.replace(/```[\w-]*\n?/g, '').replace(/```/g, '').trim();
 
             const result = await ipcRenderer.invoke('open-notepad-and-type', generatedCode);
-            aiMsg.textContent = `${result.output}\n\nGenerated Code Preview:\n${generatedCode.substring(0, 150)}...`;
+            const responseText = `${result.output}\n\nGenerated Code Preview:\n${generatedCode.substring(0, 150)}...`;
+            aiMsg.textContent = responseText;
+
             if (isVoiceActive) speakText("Code generated and pasted into Notepad.");
         } catch (err) {
             aiMsg.textContent = `Task Error: ${err.message}`;
             if (isVoiceActive) speakText("Task failed.");
         }
     }
-    // 2. App Launching
+    // 2. Simple App Launching
     else if (lowerText.startsWith('open ') || lowerText.startsWith('launch ') || lowerText.startsWith('start ')) {
         const appName = text.replace(/^(open|launch|start)\s+/i, '').trim();
         aiMsg.textContent = `Launching ${appName}...`;
 
         const result = await ipcRenderer.invoke('open-app', appName);
         aiMsg.textContent = result.output;
+
         if (isVoiceActive) speakText(result.output);
     } 
     // 3. Direct Terminal Execution
@@ -136,13 +133,15 @@ window.sendMessage = async function() {
         
         const result = await ipcRenderer.invoke('run-terminal', command);
         aiMsg.textContent = result.success ? `[Terminal Output]\n${result.output}` : `[Error]\n${result.output}`;
+
         if (isVoiceActive) speakText("Command executed.");
     } 
     // 4. Standard AI Conversation
     else {
         try {
-            const aiResponse = await callGeminiAPI(text, apiKey);
+            const aiResponse = await callGeminiAPI(text);
             aiMsg.textContent = aiResponse;
+
             if (isVoiceActive) speakText(aiResponse);
         } catch (err) {
             aiMsg.textContent = `Connection Error: ${err.message}`;
@@ -152,9 +151,9 @@ window.sendMessage = async function() {
     chatBox.scrollTop = chatBox.scrollHeight;
 };
 
-// Gemini API Call using dynamic key
-async function callGeminiAPI(promptText, apiKey) {
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${apiKey}`;
+// Gemini API Call
+async function callGeminiAPI(promptText) {
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${GEMINI_API_KEY}`;
     
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
