@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>S.L.S.I. - Sri Lanka Super Intelligence</title>
+    <style>
+        :root {
+            --bg-color: #0A0B0E;
+            --surface-color: #12141C;
+            --accent-glow: #00F0FF;
+            --text-main: #E0E6ED;
+            --text-muted: #8A99AD;
+            --active-mic: #FF3366;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 260px;
+            background-color: var(--surface-color);
+            border-right: 1px solid rgba(0, 240, 255, 0.2);
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            justify-content: space-between;
+        }
+        .logo-area {
+            font-size: 20px;
+            font-weight: bold;
+            color: var(--accent-glow);
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.6);
+            margin-bottom: 20px;
+            letter-spacing: 2px;
+        }
+        .status-box {
+            color: var(--text-muted);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .main-chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 20px;
+        }
+        .chat-box {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            max-width: 75%;
+            padding: 12px 18px;
+            border-radius: 8px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+        }
+        .message.user {
+            background-color: #1A2238;
+            align-self: flex-end;
+            border: 1px solid rgba(0, 240, 255, 0.3);
+        }
+        .message.ai {
+            background-color: var(--surface-color);
+            align-self: flex-start;
+            border-left: 3px solid var(--accent-glow);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.1);
+        }
+        .input-area {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            align-items: center;
+        }
+        input[type="text"] {
+            flex: 1;
+            background-color: var(--surface-color);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            border-radius: 6px;
+            padding: 12px;
+            color: var(--text-main);
+            font-size: 16px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+        }
+        .icon-btn {
+            background-color: var(--surface-color);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            color: var(--accent-glow);
+            width: 46px;
+            height: 46px;
+            border-radius: 6px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+        .icon-btn:hover {
+            border-color: var(--accent-glow);
+            box-shadow: 0 0 8px rgba(0, 240, 255, 0.4);
+        }
+        .icon-btn.active {
+            background-color: var(--active-mic);
+            color: #fff;
+            border-color: var(--active-mic);
+            box-shadow: 0 0 12px rgba(255, 51, 102, 0.8);
+            animation: pulse 1.5s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+        .send-btn {
+            background-color: var(--accent-glow);
+            color: #000;
+            border: none;
+            padding: 0 24px;
+            height: 46px;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
+            transition: 0.2s;
+        }
+        .send-btn:hover {
+            background-color: #00c2cc;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div>
+            <div class="logo-area">S.L.S.I. v1.0</div>
+            <div class="status-box">
+                <p>● Status: Online</p>
+                <p>● Mode: Autonomous</p>
+                <p>● Voice Mode: <span id="voiceStatus" style="color: var(--accent-glow);">OFF</span></p>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-chat">
+        <div class="chat-box" id="chatBox">
+            <div class="message ai">Sri Lanka Super Intelligence online. Click the microphone button near the chatbox to enable Voice-to-Voice mode.</div>
+        </div>
+        <div class="input-area">
+            <input type="text" id="userInput" placeholder="Ask S.L.S.I. or give a system command..." autofocus>
+            <button class="icon-btn" id="micBtn" onclick="toggleVoiceMode()" title="Toggle Voice Mode">
+                🎤
+            </button>
+            <button class="send-btn" onclick="sendMessage()">SEND</button>
+        </div>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>
